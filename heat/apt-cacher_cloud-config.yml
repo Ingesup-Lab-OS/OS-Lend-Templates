@@ -1,19 +1,17 @@
 heat_template_version: 2013-05-23
 
-description: apt-cacher server
-
-parameter_groups:
-  - label: Network
-    description: Network configuration.
-    parameters:
-      - net_id
-      - subnet_id
-      - floating_id
+description: dummy server
 
 parameters:
-  key_name:
+  kp_name:
     type: string
-    description: Keypair to use.
+    description: SSH Keypair.
+  f_name:
+    type: string
+    description: Instances flavor.
+  img_name:
+    type: string
+    description: Instance image.
   net_id:
     type: string
     description: Internal network ID.
@@ -28,64 +26,36 @@ resources:
   server1:
     type: OS::Nova::Server
     properties:
-      name: "apt-cacher"
-      image: "ubuntu-precise-x64"
-      flavor: "1vcpu512"
-      key_name: { get_param: key_name }
+      image: { get_param: img_name }
+      flavor: { get_param: f_name }
+      key_name: { get_param: kp_name }
       networks:
         - port: { get_resource: server1_port }
-      user_data_format: "RAW"
       user_data: |
         #cloud-config
 
         bootcmd:
-          - [ cloud-init-per, once, cacher-mkdir, mkdir, "/var/cache/apt-cacher-ng" ]
+          - [ cloud-init-per, once, puppet-repo-get, wget , "https://apt.puppetlabs.com/puppetlabs-release-precise.deb", "-O", "/tmp/puppet-precise.deb" ]
+          - [ cloud-init-per, once, puppet-repo-install, dpkg , -i, "/tmp/puppet-precise.deb" ]
 
-        fs_setup:
-          - label: 'cacher-data'
-            filesystem: 'ext4'
-            device: '/dev/vdb'
-        mounts:
-          - [LABEL=cacher-data, /var/cache/apt-cacher-ng, ext4, defaults]
-
-        apt_proxy: http://10.8.6.1:3142
         package_update: true
-        package_upgrade: true
         packages:
-          - apt-cacher-ng
-
-        runcmd:
-          - [ chown, "apt-cacher-ng:", "/var/cache/apt-cacher-ng" ]
-          - [ service, apt-cacher-ng, restart ]
-
-        final_message: "$TIMESTAMP: Cacher ready after $UPTIME seconds."
-
-  cache_vol1:
-    type: OS::Cinder::Volume
-    properties:
-      size: 20
-      description: apt-cacher-ng cache
-
-  cache_vol1_att:
-    type: OS::Cinder::VolumeAttachment
-    properties:
-      instance_uuid: { Ref: server1 }
-      mountpoint: "/dev/vdb"
-      volume_id: { Ref: cache_vol1 }
+          - puppet
+        final_message: "$TIMESTAMP: Puppet ready after $UPTIME seconds."
 
   cacher_secgroup:
-    type: OS::Neutron::SecurityGroup
+    type: AWS::EC2::SecurityGroup
     properties:
-      name: "apt-cacher"
-      rules:
-        - protocol: "tcp"
-          remote_ip_prefix: "0.0.0.0/0"
-          port_range_min: 3142
-          port_range_max: 3142
-        - protocol: "tcp"
-          remote_ip_prefix: "0.0.0.0/0"
-          port_range_min: 22
-          port_range_max: 22
+      GroupDescription: "apt-cacher security group."
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0"
+          FromPort: "3142"
+          ToPort: "3142"
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0"
+          FromPort: "22"
+          ToPort: "22"
 
   server1_port:
     type: OS::Neutron::Port
@@ -103,16 +73,9 @@ resources:
 
 outputs:
   WebsiteURL:
-    description: apt-cacher-ng's report URL
+    description: service ip
     value:
       str_replace:
-        template: http://host:3142/acng-report.html
-        params:
-          host: { get_attr: [server1_floating_ip, floating_ip_address] }
-  ProxyURL:
-    description: apt-cacher-ng URL
-    value:
-      str_replace:
-        template: http://host:3142/
+        template: host
         params:
           host: { get_attr: [server1_floating_ip, floating_ip_address] }
