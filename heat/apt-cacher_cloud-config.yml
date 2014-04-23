@@ -21,6 +21,17 @@ parameters:
   floating_id:
     type: string
     description: Floating subnet ID.
+  #Metadata
+  description:
+    type: string
+    description: (Metadata) Description for the created stack.
+  mail:
+    type: string
+    description: (Metadata) Mail of the user.
+  validity:
+    type: string
+    description: (Metadata) Max validity of the stack.
+
 
 resources:
   server1:
@@ -46,7 +57,7 @@ resources:
   cacher_secgroup:
     type: AWS::EC2::SecurityGroup
     properties:
-      GroupDescription: "apt-cacher security group."
+      GroupDescription: "apt-cacher"
       SecurityGroupIngress:
         - IpProtocol: "tcp"
           CidrIp: "0.0.0.0/0"
@@ -61,7 +72,7 @@ resources:
     type: OS::Neutron::Port
     properties:
       network_id: { get_param: net_id }
-      security_groups: [ Ref: cacher_secgroup ]
+      #security_groups: [ Ref: cacher_secgroup ]
       fixed_ips:
         - subnet_id: { get_param: subnet_id }
 
@@ -72,6 +83,15 @@ resources:
       port_id: { get_resource: server1_port }
 
 outputs:
+  Meta_Description:
+    description: Description Metadata
+    value: { get_attr: description }
+  Meta_Mail:
+    description: Mail Metadata
+    value: { get_attr: mail }
+  Meta_Validity:
+    description: Validity Metadata
+    value: { get_attr: validity }
   WebsiteURL:
     description: service ip
     value:
