@@ -72,7 +72,7 @@ resources:
     type: OS::Neutron::Port
     properties:
       network_id: { get_param: net_id }
-      #security_groups: [ Ref: cacher_secgroup ]
+      security_groups: [ Ref: cacher_secgroup ]
       fixed_ips:
         - subnet_id: { get_param: subnet_id }
 
@@ -85,13 +85,25 @@ resources:
 outputs:
   Meta_Description:
     description: Description Metadata
-    value: { get_attr: description }
+    value: 
+      str_replace:
+        template: sub
+        params:
+          sub: { get_param: description }
   Meta_Mail:
     description: Mail Metadata
-    value: { get_attr: mail }
+    value: 
+      str_replace:
+        template: sub
+        params:
+          sub: { get_param: mail }
   Meta_Validity:
     description: Validity Metadata
-    value: { get_attr: validity }
+    value:
+      str_replace:
+        template: sub
+        params:
+          sub: { get_param: validity }
   WebsiteURL:
     description: service ip
     value:
