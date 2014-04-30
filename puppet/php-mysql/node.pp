@@ -18,4 +18,10 @@ nginx::resource::location { 'php_fpm':
   fastcgi => '127.0.0.1:9000',
 }
 
+file { '/var/www':
+  ensure => directory,
+  owner => 'www-data',
+  group => 'www-data',
+}
+
 include mysql::server
