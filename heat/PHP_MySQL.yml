@@ -52,7 +52,7 @@ resources:
         wget "https://apt.puppetlabs.com/puppetlabs-release-precise.deb" -O "/tmp/puppet-precise.deb"
         dpkg -i "/tmp/puppet-precise.deb"
         apt-get update
-        apt-get install -y puppet
+        apt-get install -y git puppet
         git clone https://github.com/Ingesup-Lab-OS/OS-Lend-Templates.git /tmp/templates
 
         TEMPLATE_NAME="php-mysql"
