@@ -22,6 +22,9 @@ parameters:
     type: string
     description: Floating subnet ID.
   #Metadata
+  notification_status:
+    type: string
+    description: (Metadata) Notification flag.
   description:
     type: string
     description: (Metadata) Description for the created stack.
@@ -83,29 +86,20 @@ resources:
       port_id: { get_resource: server1_port }
 
 outputs:
-  Meta_Description:
+  m_notification_status:
+    description: Notification Metadata
+    value: { get_param: notification_status }
+  m_description:
     description: Description Metadata
-    value: 
-      str_replace:
-        template: sub
-        params:
-          sub: { get_param: description }
-  Meta_Mail:
+    value: { get_param: description }
+  m_mail:
     description: Mail Metadata
-    value: 
-      str_replace:
-        template: sub
-        params:
-          sub: { get_param: mail }
-  Meta_Validity:
+    value: { get_param: mail }
+  m_validity:
     description: Validity Metadata
-    value:
-      str_replace:
-        template: sub
-        params:
-          sub: { get_param: validity }
-  WebsiteURL:
-    description: service ip
+    value: { get_param: validity }
+  server_ip:
+    description: Server's floating IP
     value:
       str_replace:
         template: host
