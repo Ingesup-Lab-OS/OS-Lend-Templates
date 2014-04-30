@@ -1,0 +1,114 @@
+heat_template_version: 2013-05-23
+
+description: |
+  Serveur de développement PHP avec base de données MySQL.
+  Utilise Nginx, PHP-FPM et MySQL.
+
+parameters:
+  kp_name:
+    type: string
+    description: SSH Keypair.
+  f_name:
+    type: string
+    description: Instances flavor.
+  img_name:
+    type: string
+    description: Instance image.
+  net_id:
+    type: string
+    description: Internal network ID.
+  subnet_id:
+    type: string
+    description: Internal subnet ID.
+  floating_id:
+    type: string
+    description: Floating subnet ID.
+  #Metadata
+  notification_status:
+    type: string
+    description: (Metadata) Notification flag.
+  description:
+    type: string
+    description: (Metadata) Description for the created stack.
+  mail:
+    type: string
+    description: (Metadata) Mail of the user.
+  validity:
+    type: string
+    description: (Metadata) Max validity of the stack.
+
+resources:
+  server1:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: img_name }
+      flavor: { get_param: f_name }
+      key_name: { get_param: kp_name }
+      networks:
+        - port: { get_resource: server1_port }
+      user_data: |
+        #!/bin/bash
+
+        wget "https://apt.puppetlabs.com/puppetlabs-release-precise.deb" -O "/tmp/puppet-precise.deb"
+        dpkg -i "/tmp/puppet-precise.deb"
+        apt-get update
+        apt-get install -y puppet
+        git clone https://github.com/Ingesup-Lab-OS/OS-Lend-Templates.git /tmp/templates
+
+        TEMPLATE_NAME="php-mysql"
+        cd /tmp/templates/puppet/${TEMPLATE_NAME}
+        ./bootstrap.sh
+        puppet apply node.pp
+
+  web_secgroup:
+    type: AWS::EC2::SecurityGroup
+    properties:
+      GroupDescription: "PHP-MySQL secgroup"
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0"
+          FromPort: "22"
+          ToPort: "22"
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0"
+          FromPort: "80"
+          ToPort: "80"
+        - IpProtocol: "tcp"
+          CidrIp: "0.0.0.0/0"
+          FromPort: "443"
+          ToPort: "443"
+
+  server1_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: net_id }
+      security_groups: [ Ref: web_secgroup ]
+      fixed_ips:
+        - subnet_id: { get_param: subnet_id }
+
+  server1_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: floating_id}
+      port_id: { get_resource: server1_port }
+
+outputs:
+  m_notification_status:
+    description: Notification Metadata
+    value: { get_param: notification_status }
+  m_description:
+    description: Description Metadata
+    value: { get_param: description }
+  m_mail:
+    description: Mail Metadata
+    value: { get_param: mail }
+  m_validity:
+    description: Validity Metadata
+    value: { get_param: validity }
+  server_ip:
+    description: Server's floating IP
+    value:
+      str_replace:
+        template: host
+        params:
+          host: { get_attr: [server1_floating_ip, floating_ip_address] }
